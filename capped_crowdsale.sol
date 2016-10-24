@@ -9,7 +9,7 @@ contract BrancheProportionalCrowdsale {
     event TargetHit(uint amountRaised);
     event CrowdsaleClosed(uint amountRaised);
     event FundTransfer(address backer, uint amount);
-    event Whale(address backer, uint amount);
+    event Refunded(address backer, uint amount);
 
     function BrancheProportionalCrowdsale(uint _durationInMinutes, uint _targetETH) {
         owner = msg.sender;
@@ -20,10 +20,7 @@ contract BrancheProportionalCrowdsale {
 
     function _deposit() private {
         if (now >= deadline) throw;
-        if (msg.value > hardCap) {
-            Whale(msg.sender, msg.value);
-            throw;
-        }
+        if (msg.value > hardCap) throw;
 
         balances[msg.sender] += msg.value;
         raised += msg.value;
@@ -49,6 +46,7 @@ contract BrancheProportionalCrowdsale {
         if (refund > this.balance) refund = this.balance;
 
         refunded[msg.sender] = true;
+        Refunded(msg.sender, refund);
         if (!msg.sender.call.value(refund)()) throw;
     }
 
@@ -56,6 +54,7 @@ contract BrancheProportionalCrowdsale {
         if (now <= deadline) throw;
         if (funded) throw;
         funded = true;
+        CrowdsaleClosed(raised);
         if (raised < target) {
             if (!owner.call.value(raised)()) throw;
         } else {
