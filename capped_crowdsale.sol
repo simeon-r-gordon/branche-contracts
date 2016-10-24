@@ -1,3 +1,5 @@
+pragma solidity ^0.4.2;
+
 contract BrancheProportionalCrowdsale {
     address public owner;
     uint public target; uint public hardCap; uint public raised; uint public deadline;
@@ -9,11 +11,11 @@ contract BrancheProportionalCrowdsale {
     event FundTransfer(address backer, uint amount);
     event Whale(address backer, uint amount);
 
-    function BrancheProportionalCrowdsale(uint _blocks, uint _target) {
+    function BrancheProportionalCrowdsale(uint _durationInMinutes, uint _targetETH) {
         owner = msg.sender;
-        deadline = now + durationInMinutes * 1 minutes;
-        target = fundingGoalInEthers * 1 ether;
-        hardCap = target * 0.128;
+        deadline = now + _durationInMinutes * 1 minutes;
+        target = _targetETH * 1 ether;
+        hardCap = target/2;
     }
 
     function _deposit() private {
