@@ -3,7 +3,7 @@ pragma solidity ^0.4.2;
 contract BrancheProportionalCrowdsale {
     address public owner;
     uint public target; uint public hardCap; uint public raised; uint public deadline;
-    bool funded;
+    bool funded; bool targetHit;
     mapping(address => uint) public balances;
     mapping(address => bool) public refunded;
     event TargetHit(uint amountRaised);
@@ -38,10 +38,9 @@ contract BrancheProportionalCrowdsale {
     }
 
     function withdrawRefund() {
-        if (now <= deadline) throw;
+        if (!funded) throw;
         if (raised <= target) throw;
         if (refunded[msg.sender]) throw;
-        if (!funded) throw;
 
         uint deposit = balances[msg.sender];
         uint keep = (deposit * target) / raised;
