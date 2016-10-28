@@ -3,7 +3,7 @@ pragma solidity ^0.4.2;
 contract BrancheProportionalCrowdsale {
     address public owner;
     uint public target; uint public hardCap; uint public raised; uint public deadline;
-    bool funded; bool targetHit;
+    bool funded;
     mapping(address => uint) public balances;
     mapping(address => bool) public refunded;
     event TargetHit(uint amountRaised);
@@ -15,12 +15,14 @@ contract BrancheProportionalCrowdsale {
         owner = msg.sender;
         deadline = now + _durationInMinutes * 1 minutes;
         target = _targetETH * 1 ether;
+        // no deposit shall be over 50% of the target
         hardCap = target/2;
     }
 
     function _deposit() private {
         if (now >= deadline) throw;
-        if (msg.value > hardCap) throw;
+        // Re-instate the hard-cap of 50% by uncommenting the following line
+        // if (msg.value > hardCap) throw;
 
         balances[msg.sender] += msg.value;
         raised += msg.value;
@@ -39,6 +41,7 @@ contract BrancheProportionalCrowdsale {
         if (now <= deadline) throw;
         if (raised <= target) throw;
         if (refunded[msg.sender]) throw;
+        if (!funded) throw;
 
         uint deposit = balances[msg.sender];
         uint keep = (deposit * target) / raised;
@@ -58,6 +61,7 @@ contract BrancheProportionalCrowdsale {
         if (raised < target) {
             if (!owner.call.value(raised)()) throw;
         } else {
+            TargetHit(raised);
             if (!owner.call.value(target)()) throw;
         }
     }
