@@ -21,7 +21,7 @@ contract BrancheProportionalCrowdsale {
 
     function _deposit() private {
         if (now >= deadline) throw;
-        // Re-instate the hard-cap of 50% by uncommenting the following line
+        // Re-instate the hard-cap by uncommenting the following line
         // if (msg.value > hardCap) throw;
 
         balances[msg.sender] += msg.value;
@@ -38,7 +38,7 @@ contract BrancheProportionalCrowdsale {
     }
 
     function withdrawRefund() {
-        if (!funded) throw;
+        if (now <= deadline) throw;
         if (raised <= target) throw;
         if (refunded[msg.sender]) throw;
 
@@ -58,9 +58,11 @@ contract BrancheProportionalCrowdsale {
         funded = true;
         CrowdsaleClosed(raised);
         if (raised < target) {
+            if (raised > this.balance) raised = this.balance;
             if (!owner.call.value(raised)()) throw;
         } else {
             TargetHit(raised);
+            if (target > this.balance) target = this.balance;
             if (!owner.call.value(target)()) throw;
         }
     }
