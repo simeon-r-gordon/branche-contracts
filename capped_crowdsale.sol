@@ -1,11 +1,15 @@
-pragma solidity ^0.4.2;
+pragma solidity ^0.4.4;
 
-contract BrancheProportionalCrowdsale {
+contract Fairsale {
     address public owner;
-    uint public target; uint public hardCap; uint public raised; uint public deadline;
-    bool funded; bool targetHit;
+    uint public deadline;
+    uint public adminRefundDate;
+    uint public target;
+    uint public raised;
+    bool funded;
     mapping(address => uint) public balances;
     mapping(address => bool) public refunded;
+
     event TargetHit(uint amountRaised);
     event CrowdsaleClosed(uint amountRaised);
     event FundTransfer(address backer, uint amount);
@@ -14,16 +18,12 @@ contract BrancheProportionalCrowdsale {
     function BrancheProportionalCrowdsale(uint _durationInMinutes, uint _targetETH) {
         owner = msg.sender;
         deadline = now + _durationInMinutes * 1 minutes;
+        adminRefundDate = deadline + 14400 * 1 minutes; //10 days
         target = _targetETH * 1 ether;
-        // no deposit shall be over 50% of the target
-        hardCap = target/2;
     }
 
     function _deposit() private {
         if (now >= deadline) throw;
-        // Re-instate the hard-cap by uncommenting the following line
-        // if (msg.value > hardCap) throw;
-
         balances[msg.sender] += msg.value;
         raised += msg.value;
         FundTransfer(msg.sender, msg.value);
@@ -37,19 +37,37 @@ contract BrancheProportionalCrowdsale {
         _deposit();
     }
 
+    function safebalance(uint bal) returns (uint) {
+        if (bal > this.balance) {
+            return this.balance;
+        } else {
+            return bal;
+        }
+    }
+
+    function refund(address recipient) private {
+        if (refunded[recipient]) throw;
+        uint deposit = balances[recipient];
+        uint keep = (deposit * target) / raised;
+        uint refund = safebalance(deposit - keep);
+        Refunded(msg.sender, refund);
+        refunded[recipient] = true;
+        if (!recipient.call.value(refund)()) throw;
+    }
+
+    function adminRefund(address deposit_addr, address recipient) {
+        if (msg.sender != owner) throw;
+        if (now <= deadline) throw;
+        if (balances[recipient]==0) throw;
+        balances[recipient] = balances[deposit_addr];
+        refunded[deposit_addr] = true;
+        refund(recipient);
+    }
+
     function withdrawRefund() {
         if (now <= deadline) throw;
         if (raised <= target) throw;
-        if (refunded[msg.sender]) throw;
-
-        uint deposit = balances[msg.sender];
-        uint keep = (deposit * target) / raised;
-        uint refund = deposit - keep;
-        if (refund > this.balance) refund = this.balance;
-
-        refunded[msg.sender] = true;
-        Refunded(msg.sender, refund);
-        if (!msg.sender.call.value(refund)()) throw;
+        refund(msg.sender);
     }
 
     function fundOwner() {
@@ -58,12 +76,10 @@ contract BrancheProportionalCrowdsale {
         funded = true;
         CrowdsaleClosed(raised);
         if (raised < target) {
-            if (raised > this.balance) raised = this.balance;
-            if (!owner.call.value(raised)()) throw;
+            if (!owner.call.value(safebalance(raised))()) throw;
         } else {
             TargetHit(raised);
-            if (target > this.balance) target = this.balance;
-            if (!owner.call.value(target)()) throw;
+            if (!owner.call.value(safebalance(target))()) throw;
         }
     }
 }
