@@ -1,6 +1,6 @@
 pragma solidity ^0.4.4;
 
-contract Fairsale {
+contract BrancheProportionalCrowdsale {
     address public owner;
     uint public deadline;
     uint public adminRefundDate;
@@ -14,6 +14,7 @@ contract Fairsale {
     event CrowdsaleClosed(uint amountRaised);
     event FundTransfer(address backer, uint amount);
     event Refunded(address backer, uint amount);
+    event AdminRefund(address depositAddr, address recipientAddr);
 
     function BrancheProportionalCrowdsale(uint _durationInMinutes, uint _targetETH) {
         owner = msg.sender;
@@ -58,9 +59,10 @@ contract Fairsale {
     function adminRefund(address deposit_addr, address recipient) {
         if (msg.sender != owner) throw;
         if (now <= deadline) throw;
-        if (balances[recipient]==0) throw;
+        if (balances[recipient]!=0) throw;
         balances[recipient] = balances[deposit_addr];
         refunded[deposit_addr] = true;
+        AdminRefund(deposit_addr, recipient);
         refund(recipient);
     }
 
